@@ -82,6 +82,7 @@ async function getSensorInboxResource(session: Session): Promise<string | null> 
 }
 
 async function createSensorInboxUri(session: Session, sensorInboxUri: string): Promise<string> {
+    console.log(sensorInboxUri);
     const webId = session.info.webId!;
     let dataset = await getSolidDataset(webId, { fetch: session.fetch });
     const rdfThing = getThing(dataset, webId);
@@ -97,18 +98,17 @@ async function createSensorInboxUri(session: Session, sensorInboxUri: string): P
     // query the dataset for the user card 
     const extWebID = getThing(extendedProfileDataset, webId);
     //update the card with the public type index type (predicate) and location (object)
-    const newExtWID = setStringNoLocale(extWebID!, "http://www.example.org/sensor#sensorInbox", sensorInboxUri);
+    const newExtWID = setStringNoLocale(extWebID!, "http://www.example.org/sensor#sensorInbox", `${storageUri}${sensorInboxUri}`);
     extendedProfileDataset = setThing(extendedProfileDataset, newExtWID)
     // save the extended profile with the new public type index in the card
-    let newDataset = createSolidDataset();
     try {
         const newExtendedProfile = await saveSolidDatasetAt(extendedProfileUri!, extendedProfileDataset, { fetch: session.fetch });
         console.log(newExtendedProfile)
-        const podSensorInboxUri = `${storageUri}/${sensorInboxUri}`
+        const podSensorInboxUri = `${storageUri}${sensorInboxUri}`
         console.log(podSensorInboxUri); 
-        const newSensorInboxResource = await saveSolidDatasetAt(podSensorInboxUri, newDataset, { fetch: session.fetch });
-        console.log(newSensorInboxResource);
-        const newAccess = await universalAccess.setPublicAccess(podSensorInboxUri, { append: true, read: false}, { fetch: session.fetch });
+        const newSensorInboxContainer = await createContainerAt(podSensorInboxUri, { fetch: session.fetch });
+        console.log(newSensorInboxContainer);
+        const newAccess = await universalAccess.setPublicAccess(podSensorInboxUri, { append: true, read: false }, { fetch: session.fetch });
         if (newAccess) {
             console.log('success')
         }
@@ -170,28 +170,22 @@ app.get('/home', async (req: Request, res: Response) => {
                 dataset = await getSolidDataset(webId, { fetch: session.fetch });
             } catch (err) {
                 console.log(err)
-                //console.log(dataset)
-                const rdfThing = getThing(dataset, webId);
-                const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
-                //console.log(SPACE_PREFIX)
-                const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
-                const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
-                let newDataset = createSolidDataset();
-                const podSensorInboxUri = `${storageUri}${sensorInboxResource as string}`
-                dataset = await saveSolidDatasetAt(podSensorInboxUri, newDataset, { fetch: session.fetch});
+                
+                const podSensorInboxUri = `${sensorInboxResource as string}`
+                dataset = await createContainerAt(podSensorInboxUri, { fetch: session.fetch});
                 console.log(podSensorInboxUri);
-                const newAccess = await universalAccess.setPublicAccess(`${storageUri}${sensorInboxResource}`, { append: true, read: false}, { fetch: session.fetch });
+                const newAccess = await universalAccess.setPublicAccess(`${sensorInboxResource}`, { append: true, read: false}, { fetch: session.fetch });
                 if (newAccess) {
                     console.log('success')
                 }
             }
             const rdfThing = getThing(dataset!, webId);
-            const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
-            const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
-            const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
+            //const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
+            //const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
+            //const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
             const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
             await universalAccess.setPublicAccess(extendedProfileUri!, { read: true, write: false }, { fetch: session.fetch} );
-            await getSolidDataset(`${storageUri}${sensorInboxResource}`, {fetch: session.fetch});
+            await getSolidDataset(`${sensorInboxResource}`, {fetch: session.fetch});
             res.render('home.pug')
         } else {
             res.redirect('/error')
@@ -205,7 +199,7 @@ app.post('/create_config', upload.none(), async (req: Request, res: Response) =>
     console.log(req.body);
     const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId)
     if (session?.info.isLoggedIn) {
-        const uri = await createSensorInboxUri(session, req.body.sessionInboxUri)
+        const uri = await createSensorInboxUri(session, req.body.sensorInboxUri)
         res.redirect(uri);
     }
 })
