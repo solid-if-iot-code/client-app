@@ -30,7 +30,9 @@ import { getSolidDataset,
     getUrl,
     setUrl,
     setStringNoLocale,
-    universalAccess
+    universalAccess,
+    getIri,
+    getStringNoLocaleAll
 } from '@inrupt/solid-client';
 import path from "path";
 import * as multer from "multer";
@@ -183,12 +185,38 @@ app.get('/home', async (req: Request, res: Response) => {
             //const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
             //const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
             //const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
-            const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
-            await universalAccess.setPublicAccess(extendedProfileUri!, { read: true, write: false }, { fetch: session.fetch} );
-            await getSolidDataset(`${sensorInboxResource}`, {fetch: session.fetch});
-            res.render('home.pug')
+            //const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
+            //await universalAccess.setPublicAccess(extendedProfileUri!, { read: true, write: false }, { fetch: session.fetch} );
+            const sensorDatasets = await getSolidDataset(`${sensorInboxResource}`, {fetch: session.fetch});
+            const urls = getContainedResourceUrlAll(sensorDatasets);
+            console.log(urls);
+            let d: any = [];
+            for (const url of urls) {
+                const data = await getSolidDataset(url, {fetch: session.fetch, });
+                const things = getThingAll(data);
+                console.log(things);
+                for (const thing of things) {
+                    let o: any = {};
+                    const sensorUri = getIri(thing, 'https://www.example.org/sensor#sensorUri')
+                    o.sensorUri = sensorUri
+                    const brokerUri = getIri(thing, 'https://www.example.org/sensor#brokerUri')
+                    o.brokerUri = brokerUri
+                    const key = getStringNoLocale(thing, 'https://www.example.com/key#secure')
+                    o.key = key
+                    const subscribeTopics = getStringNoLocaleAll(thing, 'https://www.example.org/sensor#subscribeTopic');
+                    const publishTopics = getStringNoLocaleAll(thing, 'https://www.example.org/sensor#publishTopic');
+                    if (subscribeTopics.length > 0) {
+                        o.subscribeTopics = subscribeTopics;
+                    }
+                    if (publishTopics.length > 0) {
+                        o.publishTopics = publishTopics
+                    }
+                    d.push(o);
+                }
+            }
+            res.render('home.pug', {sensorData: d})
         } else {
-            res.redirect('/error')
+            res.redirect('/config')
         }
     } else {
         res.render('error.pug')

@@ -5,3 +5,16 @@ html
   include navigation.pug
   h1="Home"
   p Welcome to the Home page.
+  if sensorData
+    each item in sensorData
+      h1 item.sensorUri
+      h2 item.brokerUri
+      if item.subscribeTopics
+        li
+        for topic in item.subscribeTopics
+          ul topic
+      if item.publishTopics
+        li
+        for topic in item.publishTopics
+          ul topic
+      h5 item.key
