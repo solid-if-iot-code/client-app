@@ -29,7 +29,8 @@ import { getSolidDataset,
     getThing,
     getUrl,
     setUrl,
-    setStringNoLocale
+    setStringNoLocale,
+    universalAccess
 } from '@inrupt/solid-client';
 import path from "path";
 import * as multer from "multer";
@@ -98,7 +99,12 @@ async function createSensorInboxUri(session: Session, sensorInboxUri: string): P
     let newDataset = createSolidDataset();
     try {
         await saveSolidDatasetAt(extendedProfileUri!, extendedProfileDataset, { fetch: session.fetch });
-        await saveSolidDatasetAt(`${storageUri}/${sensorInboxUri}`, newDataset, { fetch: session.fetch })
+        const podSensorInboxUri = `${storageUri}/${sensorInboxUri}` 
+        await saveSolidDatasetAt(podSensorInboxUri, newDataset, { fetch: session.fetch });
+        const newAccess = await universalAccess.setPublicAccess(podSensorInboxUri, { append: true, read: false}, { fetch: session.fetch });
+        if (newAccess) {
+            console.log('success')
+        }
         return '/home'
     } catch (err) {
         console.error(err);
