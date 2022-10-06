@@ -180,6 +180,10 @@ app.get('/home', async (req: Request, res: Response) => {
                 const podSensorInboxUri = `${storageUri}${sensorInboxResource as string}`
                 dataset = await saveSolidDatasetAt(podSensorInboxUri, newDataset, { fetch: session.fetch});
                 console.log(podSensorInboxUri);
+                const newAccess = await universalAccess.setPublicAccess(`${storageUri}${sensorInboxResource}`, { append: true, read: false}, { fetch: session.fetch });
+                if (newAccess) {
+                    console.log('success')
+                }
             }
             const rdfThing = getThing(dataset!, webId);
             // dereference extended profile document w/ uri
@@ -189,8 +193,7 @@ app.get('/home', async (req: Request, res: Response) => {
             const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
             const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
             const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
-            const data = await getSolidDataset(`${storageUri}${sensorInboxResource}`, {fetch: session.fetch});
-            console.log(data)
+            await getSolidDataset(`${storageUri}${sensorInboxResource}`, {fetch: session.fetch});
             res.render('home.pug')
         } else {
             res.redirect('/error')
