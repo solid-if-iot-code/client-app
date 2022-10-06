@@ -10,11 +10,15 @@ html
     each item in sensorData
       p sensor URI: #{item.sensorUri}
       p broker Uri: #{item.brokerUri}
-      if item.subscribeTopics
-        for topic in item.subscribeTopics
-          ul subscribe topic: #{topic}
-      if item.publishTopics
-        
-        for topic in item.publishTopics
-          ul publish topic: {topic}
+      if item.subscribeTopics || item.publishTopics
+        form(action="/subscribe" method="post")
+          if item.subscribeTopics
+            for topic in item.subscribeTopics
+              ul(id=topic) subscribe topic: #{topic}
+            
+          if item.publishTopics
+            for topic in item.publishTopics
+              ul(id=topic) publish topic: {topic}
+            
+        button(type="submit") Subscribe
       //p key: #{item.key}

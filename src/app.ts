@@ -232,6 +232,10 @@ app.post('/create_config', upload.none(), async (req: Request, res: Response) =>
     }
 })
 
+app.post('/subscribe', upload.none(), async (req: Request, res: Response) => { 
+    console.log(req.body);
+})
+
 app.get('/error', (req, res) => {
     res.render('error.pug');
 });
