@@ -7,14 +7,14 @@ html
   p Welcome to the Home page.
   if sensorData
     each item in sensorData
-      h1 item.sensorUri
-      h2 item.brokerUri
+      h1="sensor URI: #{item.sensorUri}"
+      h2="broker Uri: #{item.brokerUri}"
       if item.subscribeTopics
         li
         for topic in item.subscribeTopics
-          ul topic
+        ul="subscribe topic: #{topic}"
       if item.publishTopics
         li
         for topic in item.publishTopics
-          ul topic
-      h5 item.key
+        ul="publish topic: #{topic}"
+      h5="key: #{item.key}"
