@@ -186,13 +186,11 @@ app.get('/home', async (req: Request, res: Response) => {
                 }
             }
             const rdfThing = getThing(dataset!, webId);
-            // dereference extended profile document w/ uri
-            // https://solid.github.io/webid-profile/#reading-extended-profile-documents
-            // https://solid.github.io/data-interoperability-panel/specification/#data-grant
-            // space prefix then creating storage, retrieve the extended profile storage uri then build the profile uri
             const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
             const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
             const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
+            const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
+            await universalAccess.setPublicAccess(extendedProfileUri!, { read: true, write: false }, { fetch: session.fetch} );
             await getSolidDataset(`${storageUri}${sensorInboxResource}`, {fetch: session.fetch});
             res.render('home.pug')
         } else {
