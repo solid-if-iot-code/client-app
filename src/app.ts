@@ -163,38 +163,32 @@ app.get('/home', async (req: Request, res: Response) => {
     const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId);
     if (session) {
         const sensorInboxResource = await getSensorInboxResource(session);
-        console.log(`inbox rsc: ${sensorInboxResource}`)
+        //console.log(`inbox rsc: ${sensorInboxResource}`)
         if (sensorInboxResource) {
             const webId = session.info.webId!;
             let dataset: any;
             try {
-                console.log('in try block')
+                //console.log('in try block')
                 dataset = await getSolidDataset(webId, { fetch: session.fetch });
             } catch (err) {
                 console.log(err)
                 
                 const podSensorInboxUri = `${sensorInboxResource as string}`
                 dataset = await createContainerAt(podSensorInboxUri, { fetch: session.fetch});
-                console.log(podSensorInboxUri);
+                //console.log(podSensorInboxUri);
                 const newAccess = await universalAccess.setPublicAccess(`${sensorInboxResource}`, { append: true, read: false}, { fetch: session.fetch });
                 if (newAccess) {
                     console.log('success')
                 }
             }
-            const rdfThing = getThing(dataset!, webId);
-            //const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
-            //const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
-            //const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
-            //const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
-            //await universalAccess.setPublicAccess(extendedProfileUri!, { read: true, write: false }, { fetch: session.fetch} );
             const sensorDatasets = await getSolidDataset(`${sensorInboxResource}`, {fetch: session.fetch});
             const urls = getContainedResourceUrlAll(sensorDatasets);
-            console.log(urls);
+            //console.log(urls);
             let d: any = [];
             for (const url of urls) {
                 const data = await getSolidDataset(url, {fetch: session.fetch, });
                 const things = getThingAll(data);
-                console.log(things);
+                //console.log(things);
                 for (const thing of things) {
                     let o: any = {};
                     const sensorUri = getIri(thing, 'https://www.example.org/sensor#sensorUri')
