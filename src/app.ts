@@ -145,7 +145,16 @@ async function getSensorContacts(storageUri: string, session: Session) {
         const contacts = getThingAll(data);
         return contacts;
     } catch (err: any) {
-        throw new Error(err.toString())
+        console.log(err);
+        try {
+            let newData = createSolidDataset();
+            const data = await saveSolidDatasetAt(sensorContactsUri, newData, { fetch: session.fetch }); 
+            console.log('created new Dataset!');
+            const contacts = getThingAll(data);
+            return contacts;
+        } catch (err: any) {
+            throw new Error(err.toString())
+        }
     }
 }
 
