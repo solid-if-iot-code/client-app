@@ -68,20 +68,25 @@ app.use(
 async function getSensorInboxResource(session: Session): Promise<string | null> {
     const webId = session.info.webId!;
     //console.log('in get sensor inbox rsc')
-    let dataset = await getSolidDataset(webId, { fetch: session.fetch });
-    const rdfThing = getThing(dataset, webId);
-    //console.log(dataset)
-    const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
-    // dereference extended profile document w/ uri
-    let extendedProfileDataset = await getSolidDataset(extendedProfileUri!, { fetch: session.fetch });
-    //console.log(extendedProfileDataset)
-    // https://solid.github.io/webid-profile/#reading-extended-profile-documents
-    // https://solid.github.io/data-interoperability-panel/specification/#data-grant
-    // query the dataset for the user card 
-    const extWebID = getThing(extendedProfileDataset, webId);
-    const sensorInboxUri = getStringNoLocale(extWebID!, 'http://www.example.org/sensor#sensorInbox');
-    //console.log('exiting get sensor fn')
-    return sensorInboxUri;
+    try {
+        let dataset = await getSolidDataset(webId, { fetch: session.fetch });
+        const rdfThing = getThing(dataset, webId);
+        //console.log(dataset)
+        const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
+        // dereference extended profile document w/ uri
+        let extendedProfileDataset = await getSolidDataset(extendedProfileUri!, { fetch: session.fetch });
+        //console.log(extendedProfileDataset)
+        // https://solid.github.io/webid-profile/#reading-extended-profile-documents
+        // https://solid.github.io/data-interoperability-panel/specification/#data-grant
+        // query the dataset for the user card 
+        const extWebID = getThing(extendedProfileDataset, webId);
+        const sensorInboxUri = getStringNoLocale(extWebID!, 'http://www.example.org/sensor#sensorInbox');
+        //console.log('exiting get sensor fn')
+        return sensorInboxUri;
+    } catch (err: any) {
+        throw new Error(err.message);
+    }
+    
 }
 
 async function createSensorInboxUri(session: Session, sensorInboxUri: string): Promise<string> {
@@ -200,8 +205,16 @@ app.post('/add_sensor_contacts', upload.none(), async (req: Request, res: Respon
             .build();
           data = setThing(data, newContact);
           await saveSolidDatasetAt(sensorContactsUri, data, { fetch: session.fetch });
-          console.log("success!");
-          res.redirect('/add_sensor_contacts');
+          console.log("successfully saved contacts dataset!");
+          const sensorInboxResourceUri = await getSensorInboxResource(session)
+          const access = universalAccess.setAgentAccess(sensorInboxResourceUri!, req.body.webId, { write:false, read: true}, { fetch: session.fetch })
+          if (await access) {
+            console.log('access set successfully')
+            res.redirect('/add_sensor_contacts');
+          } else {
+            throw new Error('something went wrong with setting access');
+          }
+          
         } catch (err) {
             console.log(err);
             res.redirect('/error')
