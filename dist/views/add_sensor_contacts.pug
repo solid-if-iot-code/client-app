@@ -1,0 +1,18 @@
+html
+  head
+    title="Contacts"
+  body
+    include navigation.pug
+    h1 Add Contact
+    form(action="/add_sensor_contacts" method="post" id="oidc" enctype="multipart/form-data")
+      label(for="webId") New Contact Web ID:
+      input(name="webId" type="text" id="webId")
+      input(type="submit" value="Add new Sensor Contact")
+    h1 Contacts
+      if contacts
+        each contact in contacts
+          div(class="contact")
+            p contact webId: #{contact.webId}
+            | date added: #{contact.dateAdded}
+      else
+        h3="There are no current contacts."

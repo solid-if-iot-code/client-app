@@ -13,12 +13,12 @@ html
       if item.subscribeTopics || item.publishTopics
         form(action="/subscribe" method="post" enctype="multipart/form-data")
           if item.subscribeTopics
-            for topic in item.subscribeTopics
+            each topic in item.subscribeTopics
               ul(id=topic) subscribe topic: #{topic}
             
           if item.publishTopics
-            for topic in item.publishTopics
-              ul(id=topic) publish topic: {topic}
+            each topic in item.publishTopics
+              ul(id=topic) publish topic: #{topic}
             
           button(type="submit") Subscribe
       //p key: #{item.key}

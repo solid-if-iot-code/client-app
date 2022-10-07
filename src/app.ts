@@ -32,7 +32,8 @@ import { getSolidDataset,
     setStringNoLocale,
     universalAccess,
     getIri,
-    getStringNoLocaleAll
+    getStringNoLocaleAll,
+    getDate
 } from '@inrupt/solid-client';
 import path from "path";
 import * as multer from "multer";
@@ -40,7 +41,7 @@ import { QueryEngine } from "@comunica/query-sparql";
 import _ from "lodash";
 const myEngine = new QueryEngine();
 const upload = multer.default();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 const app: Express = express();
 //this uses path join with __dirname
 //__dirname is the current directory of the executed file, which is necessary for the js file
@@ -123,6 +124,82 @@ async function createSensorInboxUri(session: Session, sensorInboxUri: string): P
 
 app.get('/', (req: Request, res: Response) => {
     res.render('index.pug')
+})
+
+async function getStorageUri(session: Session): Promise<string> {
+    const webId = session.info.webId!;
+    const data = await getSolidDataset(webId, {fetch: session.fetch});
+    const webIdThing = getThing(data, webId);
+    const storageUri = getUrl(webIdThing!, 'http://www.w3.org/ns/pim/space#storage');
+    if (storageUri) {
+        return storageUri;
+    } else {
+        throw new Error('No storage uri found in webId document.')
+    }
+}
+
+async function getSensorContacts(storageUri: string, session: Session) {
+    const sensorContactsUri = `${storageUri}contacts/sensorContacts`;
+    try {
+        const data = await getSolidDataset(sensorContactsUri, { fetch: session.fetch })
+        const contacts = getThingAll(data);
+        return contacts;
+    } catch (err: any) {
+        throw new Error(err.toString())
+    }
+}
+
+app.get('/add_sensor_contacts', async (req: Request, res: Response) => {
+    const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId);
+    if (session) {
+        try {
+            const storageUri = await getStorageUri(session);
+            const contacts = await getSensorContacts(storageUri, session);
+            if (contacts) {
+                let parsedContacts: any = [];
+                for (const contact of contacts) {
+                    let o: any = {};
+                    const dateAdded = getDate(contact, "https://www.example.com/contact#addedDate");
+                    const webId = getIri(contact, "https://www.exampe.com/contact#webId");
+                    o.webId = webId;
+                    o.dateAdded = dateAdded;
+                    parsedContacts.push(o);
+                }
+                res.render('add_sensor_contacts.pug', {contacts: parsedContacts})
+            } else {
+                res.render('add_sensor_contacts.pug')
+            }
+        } catch (err) {
+            res.redirect('/error')
+        }
+    } else {
+        res.redirect('/error');
+    }
+})
+
+app.post('/add_sensor_contacts', upload.none(), async (req: Request, res: Response) => {
+    const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId);
+    if (session) {
+        console.log(req.body);
+        try {
+          const storageUri = await getStorageUri(session);
+          const sensorContactsUri = `${storageUri}contacts/sensorContacts`;
+          let data = await getSolidDataset(sensorContactsUri, { fetch: session.fetch });
+          let newContact = buildThing(createThing({name: req.body.webId}))
+            .addDate("https://www.example.com/contact#addedDate", new Date())
+            .addIri("https://www.exampe.com/contact#webId", req.body.webId as string)
+            .build();
+          data = setThing(data, newContact);
+          await saveSolidDatasetAt(sensorContactsUri, data, { fetch: session.fetch });
+          console.log("success!");
+          res.redirect('/add_sensor_contacts');
+        } catch (err) {
+            console.log(err);
+            res.redirect('/error')
+        }
+    } else {
+        res.redirect('/error');
+    }
 })
 
 app.post("/login", upload.none(), (req: Request, res: Response) => {
