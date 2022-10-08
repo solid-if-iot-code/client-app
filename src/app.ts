@@ -281,33 +281,33 @@ app.get('/home', async (req: Request, res: Response) => {
                 }
             }
             const sensorDatasets = await getSolidDataset(`${sensorInboxResource}`, {fetch: session.fetch});
-            const urls = getContainedResourceUrlAll(sensorDatasets);
-            //console.log(urls);
-            let d: any = [];
-            for (const url of urls) {
-                const data = await getSolidDataset(url, {fetch: session.fetch, });
-                const things = getThingAll(data);
-                //console.log(things);
-                for (const thing of things) {
-                    let o: any = {};
-                    const sensorUri = getIri(thing, 'https://www.example.org/sensor#sensorUri')
-                    o.sensorUri = sensorUri
-                    const brokerUri = getIri(thing, 'https://www.example.org/sensor#brokerUri')
-                    o.brokerUri = brokerUri
-                    const key = getStringNoLocale(thing, 'https://www.example.com/key#secure')
-                    o.key = key
-                    const subscribeTopics = getStringNoLocaleAll(thing, 'https://www.example.org/sensor#subscribeTopic');
-                    const publishTopics = getStringNoLocaleAll(thing, 'https://www.example.org/sensor#publishTopic');
-                    if (subscribeTopics.length > 0) {
-                        o.subscribeTopics = subscribeTopics;
+            const sensorThingUrls = getContainedResourceUrlAll(sensorDatasets);
+            let sensorThings = [];
+            for (const sensorThingUrl of sensorThingUrls) {
+                const sensorThingData = await getSolidDataset(sensorThingUrl, { fetch: session.fetch });
+                const sThings = getThingAll(sensorThingData);
+                
+                for (const sThing of sThings) {
+                    const newThing: any = {};
+                    const topicUris = getIri(sThing, "https://www.example.org/sensor#topicsUri")
+                    let topics = [];
+                    for (const topicIri of topicUris!) {
+                        
+                        const topicDataset = await getSolidDataset(topicIri!, { fetch: session.fetch });
+                        const topicsThings = getThingAll(topicDataset);
+                        const subscribeTopics = topicsThings.map(topic => getStringNoLocaleAll(topic, "https://www.example.org/sensor#subscribeTopic"))
+                        const publishTopics = topicsThings.map(topic => getStringNoLocaleAll(topic, "https://www.example.org/sensor#publishTopic"))
+                        topics.push(...subscribeTopics);
+                        topics.push(...publishTopics);
                     }
-                    if (publishTopics.length > 0) {
-                        o.publishTopics = publishTopics
-                    }
-                    d.push(o);
-                }
+                    newThing.topics = topics;
+                    newThing.name = getStringNoLocaleAll(sThing, "https://www.example.org/sensor#name");
+                    newThing.status = 'unsubscribed';
+                    sensorThings.push(newThing);
+                }   
             }
-            res.render('home.pug', {sensorData: d})
+            console.log(sensorThings);
+            res.render('home.pug')
         } else {
             res.redirect('/config')
         }
