@@ -306,6 +306,7 @@ app.get('/home', async (req: Request, res: Response) => {
                         let newSubTopics: any = [];
                         for (const topic of sTopics) {
                             newSubTopics.push({'status': 'unsubscribed', topic})
+                            console.log(topic);
                         }
                         if (newPubTopics.length > 0) publishTopics.push(...newPubTopics)
                         if (newSubTopics.length > 0) subscribeTopics.push(...newSubTopics)
@@ -332,15 +333,25 @@ app.get('/home', async (req: Request, res: Response) => {
                 }
             }
             const subscribedTopics = getThingAll(data);
+            const subscribedTopicsIds = subscribedTopics.map(thing => getStringNoLocale(thing, 'https://www.example.org/identifier#fullTopicString'))
             if (subscribedTopics.length > 0) {
                 for (const sensorThing of sensorThings) {
-
+                    for (let h = 0; h < sensorThing.subscribeTopics.length; h++) {
+                        const compareString = `${sensorThing.topicsUri}+${sensorThing.subscribeTopics[h]}`
+                        console.log(compareString);
+                        for (let i = 0; i < subscribedTopicsIds.length; i++) { 
+                            if (compareString === subscribedTopicsIds[i]) {
+                                sensorThing.subscribeTopics[h].status = 'subscribed';
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             
             console.log(sensorThings);
             
-            res.render('home.pug')
+            res.render('home.pug', {sensorData: sensorThings})
         } else {
             res.redirect('/config')
         }
