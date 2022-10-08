@@ -6,19 +6,23 @@ html
   h1="Home"
   p Welcome to the Home page.
   if sensorData
-    
     each item in sensorData
+      p sensor name: #{item.name}
       p sensor URI: #{item.sensorUri}
       p broker Uri: #{item.brokerUri}
       if item.subscribeTopics || item.publishTopics
-        form(action="/subscribe" method="post" enctype="multipart/form-data")
-          if item.subscribeTopics
-            each topic in item.subscribeTopics
-              ul(id=topic) subscribe topic: #{topic}
-            
-          if item.publishTopics
-            each topic in item.publishTopics
-              ul(id=topic) publish topic: #{topic}
-            
-          button(type="submit") Subscribe
-      //p key: #{item.key}
+        if item.subscribeTopics
+          each topic in item.subscribeTopics
+            ul(id=topic.topic) subscribe topic: #{topic.topic}
+            if topic.status === "unsubscribed"
+              button(type="button" onclick="subscribe") Subscribe
+            else if topic.status === "subscribed"
+              button(type="button" onclick="unsubscribe") Unsubscribe
+        if item.publishTopics
+          each topic in item.publishTopics
+            ul(id=topic.topic) publish topic: #{topic.topic}
+            if topic.status === "unpublished"
+              button(type="button") Publish
+            else if topic.status === "published"
+              button(type="button") Unpublish
+  script(src="/js/home.js")

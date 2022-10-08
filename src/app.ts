@@ -258,6 +258,7 @@ app.get("/redirect-from-solid-idp", async (req, res) => {
     }
 });
 
+
 app.get('/home', async (req: Request, res: Response) => {
     const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId);
     if (session) {
@@ -301,7 +302,7 @@ app.get('/home', async (req: Request, res: Response) => {
                         let pTopics = getStringNoLocaleAll(topic, "https://www.example.org/sensor#publishTopic")
                         let newPubTopics: any = [];
                         for (const topic of pTopics) {
-                            newPubTopics.push({'status': 'unpublish', topic})
+                            newPubTopics.push({'status': 'unpublished', topic})
                         }
                         let newSubTopics: any = [];
                         for (const topic of sTopics) {
@@ -314,6 +315,8 @@ app.get('/home', async (req: Request, res: Response) => {
                     newThing.subscribeTopics = subscribeTopics;
                     newThing.publishTopics = publishTopics;
                     newThing.topicsUri = topicsUri;
+                    newThing.brokerUri = getUrl(sThing, "https://www.example.org/sensor#brokerUri")
+                    newThing.sensorUri = getStringNoLocale(sThing, "https://www.example.org/sensor#sensorUri")
                     newThing.name = getStringNoLocale(sThing, "https://www.example.org/sensor#name");
                     sensorThings.push(newThing);
                 } 
@@ -371,6 +374,7 @@ app.post('/create_config', upload.none(), async (req: Request, res: Response) =>
 
 app.post('/subscribe', upload.none(), async (req: Request, res: Response) => { 
     console.log(req.body);
+    res.redirect('/home');
 })
 
 app.get('/error', (req, res) => {
