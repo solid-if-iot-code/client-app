@@ -301,6 +301,7 @@ app.get('/home', async (req: Request, res: Response) => {
                         topics.push(...publishTopics);
                     }
                     newThing.topics = topics;
+                    newThing.topicsUri = topicUris;
                     newThing.name = getStringNoLocaleAll(sThing, "https://www.example.org/sensor#name");
                     newThing.status = 'unsubscribed';
                     sensorThings.push(newThing);
