@@ -13,11 +13,11 @@ html
       if item.subscribeTopics || item.publishTopics
         if item.subscribeTopics
           each topic in item.subscribeTopics
-            ul(id=topic.topic) subscribe topic: #{topic.topic}
+            ul subscribe topic: #{topic.topic}
             if topic.status === "unsubscribed"
-              button(type="button" onclick="subscribe") Subscribe
+              button(type="button" class="subscribed" id=topic.topic value=item.topicsUri) Subscribe
             else if topic.status === "subscribed"
-              button(type="button" onclick="unsubscribe") Unsubscribe
+              button(type="button" class="unsubscribed" id=topic.topic value=item.topicsUri) Unsubscribe
         if item.publishTopics
           each topic in item.publishTopics
             ul(id=topic.topic) publish topic: #{topic.topic}

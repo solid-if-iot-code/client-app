@@ -33,7 +33,8 @@ import { getSolidDataset,
     universalAccess,
     getIri,
     getStringNoLocaleAll,
-    getDate
+    getDate,
+    removeThing
 } from '@inrupt/solid-client';
 import path from "path";
 import * as multer from "multer";
@@ -372,9 +373,48 @@ app.post('/create_config', upload.none(), async (req: Request, res: Response) =>
     }
 })
 
-app.post('/subscribe', upload.none(), async (req: Request, res: Response) => { 
+app.post('/subscribe', async (req: Request, res: Response) => { 
     console.log(req.body);
-    res.redirect('/home');
+    //res.redirect('/home');
+    const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId)
+    if (session) {
+        try {
+            const subscribedTopicsUri = `${await getStorageUri(session)}public/subscribedTopics`;
+            let subscribedTopicsData = await getSolidDataset(subscribedTopicsUri, { fetch: session.fetch })
+            //const subscribedtopicsThings = getThingAll(subscribedTopicsData);
+            const newSubscribeTopic = buildThing(createThing())
+              .addStringNoLocale('https://www.example.org/identifier#fullTopicString', `${req.body.uri}+${req.body.topic}`)
+              .build();
+            subscribedTopicsData = setThing(subscribedTopicsData, newSubscribeTopic);
+            const newSet = await saveSolidDatasetAt(subscribedTopicsUri, subscribedTopicsData, { fetch: session.fetch});
+            console.log(newSet);
+            res.status(200).send();
+        } catch(err) {
+            console.log(err);
+            res.status(404).send();
+        }   
+    }
+})
+
+app.post('/unsubscribe', async (req: Request, res: Response) => {
+    console.log(req.body);
+    //res.redirect('/home');
+    const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId)
+    if (session) {
+        try {
+            const subscribedTopicsUri = `${await getStorageUri(session)}public/subscribedTopics`;
+            let subscribedTopicsData = await getSolidDataset(subscribedTopicsUri, { fetch: session.fetch })
+            const subscribedTopicsThings = getThingAll(subscribedTopicsData);
+            const thingToDelete = subscribedTopicsThings.filter(t => getStringNoLocale(t, 'https://www.example.org/identifier#fullTopicString') === `${req.body.uri}+${req.body.topic}`)
+            subscribedTopicsData = removeThing(subscribedTopicsData, thingToDelete[0]);
+            const newSet = await saveSolidDatasetAt(subscribedTopicsUri, subscribedTopicsData, { fetch: session.fetch});
+            console.log(newSet);
+            res.status(200).send();
+        } catch(err) {
+            console.log(err);
+            res.status(404).send();
+        }   
+    }
 })
 
 app.get('/error', (req, res) => {
