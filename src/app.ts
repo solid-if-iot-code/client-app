@@ -332,6 +332,12 @@ app.get('/home', async (req: Request, res: Response) => {
                 }
             }
             const subscribedTopics = getThingAll(data);
+            if (subscribedTopics.length > 0) {
+                for (const sensorThing of sensorThings) {
+
+                }
+            }
+            
             console.log(sensorThings);
             
             res.render('home.pug')
