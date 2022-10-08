@@ -282,32 +282,58 @@ app.get('/home', async (req: Request, res: Response) => {
             }
             const sensorDatasets = await getSolidDataset(`${sensorInboxResource}`, {fetch: session.fetch});
             const sensorThingUrls = getContainedResourceUrlAll(sensorDatasets);
-            let sensorThings = [];
+            let sensorThings: any = [];
             for (const sensorThingUrl of sensorThingUrls) {
                 const sensorThingData = await getSolidDataset(sensorThingUrl, { fetch: session.fetch });
                 const sThings = getThingAll(sensorThingData);
-                
+                 
                 for (const sThing of sThings) {
                     const newThing: any = {};
-                    const topicUris = getIri(sThing, "https://www.example.org/sensor#topicsUri")
-                    let topics = [];
-                    for (const topicIri of topicUris!) {
-                        
-                        const topicDataset = await getSolidDataset(topicIri!, { fetch: session.fetch });
-                        const topicsThings = getThingAll(topicDataset);
-                        const subscribeTopics = topicsThings.map(topic => getStringNoLocaleAll(topic, "https://www.example.org/sensor#subscribeTopic"))
-                        const publishTopics = topicsThings.map(topic => getStringNoLocaleAll(topic, "https://www.example.org/sensor#publishTopic"))
-                        topics.push(...subscribeTopics);
-                        topics.push(...publishTopics);
+                    //console.log(sThing)
+                    const topicsUri = getIri(sThing, "https://www.example.org/sensor#topicsUri")
+                    const topicsDataset = await getSolidDataset(topicsUri!, { fetch: session.fetch});
+                    const topicsThings = getThingAll(topicsDataset);
+                    let subscribeTopics: any = []
+                    let publishTopics: any = []
+                    for (const topic of topicsThings) {
+                        console.log(topic)
+                        let sTopics = getStringNoLocaleAll(topic, "https://www.example.org/sensor#subscribeTopic")
+                        let pTopics = getStringNoLocaleAll(topic, "https://www.example.org/sensor#publishTopic")
+                        let newPubTopics: any = [];
+                        for (const topic of pTopics) {
+                            newPubTopics.push({'status': 'unpublish', topic})
+                        }
+                        let newSubTopics: any = [];
+                        for (const topic of sTopics) {
+                            newSubTopics.push({'status': 'unsubscribed', topic})
+                        }
+                        if (newPubTopics.length > 0) publishTopics.push(...newPubTopics)
+                        if (newSubTopics.length > 0) subscribeTopics.push(...newSubTopics)
                     }
-                    newThing.topics = topics;
-                    newThing.topicsUri = topicUris;
-                    newThing.name = getStringNoLocaleAll(sThing, "https://www.example.org/sensor#name");
-                    newThing.status = 'unsubscribed';
+                    newThing.subscribeTopics = subscribeTopics;
+                    newThing.publishTopics = publishTopics;
+                    newThing.topicsUri = topicsUri;
+                    newThing.name = getStringNoLocale(sThing, "https://www.example.org/sensor#name");
                     sensorThings.push(newThing);
-                }   
+                } 
+                  
             }
+            const subscribedTopicsUri = `${await getStorageUri(session)}public/subscribedTopics`;
+            let data;
+            try {
+                data = await getSolidDataset(subscribedTopicsUri, { fetch: session.fetch }) 
+            } catch (err) {
+                console.log(err)
+                let newData = createSolidDataset();
+                try {
+                    data = await saveSolidDatasetAt(subscribedTopicsUri, newData, { fetch: session.fetch})
+                } catch (err: any) {
+                    throw new Error(err.message);
+                }
+            }
+            const subscribedTopics = getThingAll(data);
             console.log(sensorThings);
+            
             res.render('home.pug')
         } else {
             res.redirect('/config')
