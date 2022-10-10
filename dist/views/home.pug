@@ -15,12 +15,12 @@ html
           each topic in item.subscribeTopics
             ul subscribe topic: #{topic.topic}
             if topic.status === "unsubscribed"
-              button(type="button" class="subscribed" id=topic.topic value=item.topicsUri) Subscribe
+              button(type="button" class="subscribed" id=topic.topic value=item.brokerUri) Subscribe
             else if topic.status === "subscribed"
-              button(type="button" class="unsubscribed" id=topic.topic value=item.topicsUri) Unsubscribe
+              button(type="button" class="unsubscribed" id=topic.topic value=item.brokerUri) Unsubscribe
         if item.publishTopics
           each topic in item.publishTopics
-            ul(id=topic.topic) publish topic: #{topic.topic}
+            ul publish topic: #{topic.topic}
             if topic.status === "unpublished"
               button(type="button") Publish
             else if topic.status === "published"
