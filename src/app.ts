@@ -341,7 +341,7 @@ app.get('/home', async (req: Request, res: Response) => {
             if (subscribedTopics.length > 0) {
                 for (const sensorThing of sensorThings) {
                     for (let h = 0; h < sensorThing.subscribeTopics.length; h++) {
-                        const compareString = `${sensorThing.topicsUri}+${sensorThing.subscribeTopics[h].topic}`
+                        const compareString = `${sensorThing.brokerUri}+${sensorThing.subscribeTopics[h].topic}`
                         console.log(compareString);
                         for (let i = 0; i < subscribedTopicsIds.length; i++) { 
                             if (compareString === subscribedTopicsIds[i]) {
