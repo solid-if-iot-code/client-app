@@ -38,9 +38,8 @@ import { getSolidDataset,
 } from '@inrupt/solid-client';
 import path from "path";
 import * as multer from "multer";
-import { QueryEngine } from "@comunica/query-sparql";
 import _ from "lodash";
-const myEngine = new QueryEngine();
+import { FOAF, SCHEMA_INRUPT, VCARD } from "@inrupt/vocab-common-rdf";
 const upload = multer.default();
 const PORT = process.env.PORT || 3002;
 const app: Express = express();
@@ -72,16 +71,15 @@ async function getSensorInboxResource(session: Session): Promise<string | null> 
     try {
         let dataset = await getSolidDataset(webId, { fetch: session.fetch });
         const rdfThing = getThing(dataset, webId);
-        //console.log(dataset)
-        const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
-        // dereference extended profile document w/ uri
-        let extendedProfileDataset = await getSolidDataset(extendedProfileUri!, { fetch: session.fetch });
-        //console.log(extendedProfileDataset)
-        // https://solid.github.io/webid-profile/#reading-extended-profile-documents
-        // https://solid.github.io/data-interoperability-panel/specification/#data-grant
+        const profileUri = getUrl(rdfThing!, FOAF.isPrimaryTopicOf);
+        // dereference profile document w/ uri
+        let profileDataset = await getSolidDataset(profileUri!, { fetch: session.fetch });
+        console.log(profileDataset)
         // query the dataset for the user card 
-        const extWebID = getThing(extendedProfileDataset, webId);
+        const extWebID = getThing(profileDataset, webId);
+        console.log(extWebID)
         const sensorInboxUri = getStringNoLocale(extWebID!, 'http://www.example.org/sensor#sensorInbox');
+        console.log(sensorInboxUri)
         //console.log('exiting get sensor fn')
         return sensorInboxUri;
     } catch (err: any) {
@@ -93,35 +91,42 @@ async function getSensorInboxResource(session: Session): Promise<string | null> 
 async function createSensorInboxUri(session: Session, sensorInboxUri: string): Promise<string> {
     console.log(sensorInboxUri);
     const webId = session.info.webId!;
+   // console.log(webId)
+    try {
     let dataset = await getSolidDataset(webId, { fetch: session.fetch });
+    console.log(dataset);
     const rdfThing = getThing(dataset, webId);
-    const extendedProfileUri = getUrl(rdfThing!, 'http://www.w3.org/2000/01/rdf-schema#seeAlso');
-    // dereference extended profile document w/ uri
-    let extendedProfileDataset = await getSolidDataset(extendedProfileUri!, { fetch: session.fetch });
-    // https://solid.github.io/webid-profile/#reading-extended-profile-documents
-    // https://solid.github.io/data-interoperability-panel/specification/#data-grant
-    // space prefix then creating storage, retrieve the extended profile storage uri then build the profile uri
+    console.log('passed')
+    const profileUri = getUrl(rdfThing!, FOAF.isPrimaryTopicOf);
+    await universalAccess.setPublicAccess(profileUri!, { read: true, write: false }, { fetch: session.fetch})
+    
+    // dereference profile document w/ uri
+    let profileDataset = await getSolidDataset(profileUri!, { fetch: session.fetch });
+    console.log('passed 3')
+    
     const SPACE_PREFIX = "http://www.w3.org/ns/pim/space#";
     const STORAGE_SUBJ = `${SPACE_PREFIX}storage`;
     const storageUri = getUrl(rdfThing!, STORAGE_SUBJ);
     // query the dataset for the user card 
-    const extWebID = getThing(extendedProfileDataset, webId);
+    const pWebID = getThing(profileDataset, webId);
     //update the card with the public type index type (predicate) and location (object)
-    const newExtWID = setStringNoLocale(extWebID!, "http://www.example.org/sensor#sensorInbox", `${storageUri}${sensorInboxUri}`);
-    extendedProfileDataset = setThing(extendedProfileDataset, newExtWID)
-    // save the extended profile with the new public type index in the card
-    try {
-        const newExtendedProfile = await saveSolidDatasetAt(extendedProfileUri!, extendedProfileDataset, { fetch: session.fetch });
-        console.log(newExtendedProfile)
-        const podSensorInboxUri = `${storageUri}${sensorInboxUri}`
-        console.log(podSensorInboxUri); 
-        const newSensorInboxContainer = await createContainerAt(podSensorInboxUri, { fetch: session.fetch });
-        console.log(newSensorInboxContainer);
-        const newAccess = await universalAccess.setPublicAccess(podSensorInboxUri, { append: true, read: false }, { fetch: session.fetch });
-        if (newAccess) {
-            console.log('success')
-        }
-        return '/home'
+    const newPWebID = setStringNoLocale(pWebID!, "http://www.example.org/sensor#sensorInbox", `${storageUri}${sensorInboxUri}`);
+    profileDataset = setThing(profileDataset, newPWebID)
+    console.log('passed 4')
+    
+    // save the profile with the new public type index in the card
+    
+    const newProfile = await saveSolidDatasetAt(profileUri!, profileDataset, { fetch: session.fetch });
+    console.log(newProfile)
+    const podSensorInboxUri = `${storageUri}${sensorInboxUri}`
+    console.log(podSensorInboxUri); 
+    const newSensorInboxContainer = await createContainerAt(podSensorInboxUri, { fetch: session.fetch });
+    console.log(newSensorInboxContainer);
+    const newAccess = await universalAccess.setPublicAccess(podSensorInboxUri, { append: true, read: false }, { fetch: session.fetch });
+    if (newAccess) {
+        console.log('success')
+    }
+    return '/home'
     } catch (err) {
         console.error(err);
         return '/error'
@@ -134,14 +139,19 @@ app.get('/', (req: Request, res: Response) => {
 
 async function getStorageUri(session: Session): Promise<string> {
     const webId = session.info.webId!;
-    const data = await getSolidDataset(webId, {fetch: session.fetch});
-    const webIdThing = getThing(data, webId);
-    const storageUri = getUrl(webIdThing!, 'http://www.w3.org/ns/pim/space#storage');
-    if (storageUri) {
-        return storageUri;
-    } else {
-        throw new Error('No storage uri found in webId document.')
+    try {
+        const data = await getSolidDataset(webId, {fetch: session.fetch});
+        const webIdThing = getThing(data, webId);
+        const storageUri = getUrl(webIdThing!, 'http://www.w3.org/ns/pim/space#storage');
+        if (storageUri) {
+            return storageUri;
+        } else {
+            throw new Error('No storage uri found in webId document.')
+        }
+    } catch (err: any) {
+        throw new Error(err.message)
     }
+    
 }
 
 async function getSensorContacts(storageUri: string, session: Session) {
@@ -263,8 +273,15 @@ app.get("/redirect-from-solid-idp", async (req, res) => {
 app.get('/home', async (req: Request, res: Response) => {
     const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId);
     if (session) {
-        const sensorInboxResource = await getSensorInboxResource(session);
-        //console.log(`inbox rsc: ${sensorInboxResource}`)
+        let sensorInboxResource;
+        try {
+            sensorInboxResource = await getSensorInboxResource(session);
+        } catch (err) {
+            console.log('first error')
+            //console.log(err);
+            res.redirect('config');
+        }
+        
         if (sensorInboxResource) {
             const webId = session.info.webId!;
             let dataset: any;
@@ -288,7 +305,7 @@ app.get('/home', async (req: Request, res: Response) => {
             for (const sensorThingUrl of sensorThingUrls) {
                 const sensorThingData = await getSolidDataset(sensorThingUrl, { fetch: session.fetch });
                 const sThings = getThingAll(sensorThingData);
-                 
+                    
                 for (const sThing of sThings) {
                     const newThing: any = {};
                     //console.log(sThing)
@@ -321,7 +338,7 @@ app.get('/home', async (req: Request, res: Response) => {
                     newThing.name = getStringNoLocale(sThing, "https://www.example.org/sensor#name");
                     sensorThings.push(newThing);
                 } 
-                  
+                    
             }
             const subscribedTopicsUri = `${await getStorageUri(session)}public/subscribedTopics`;
             let data;
@@ -352,16 +369,13 @@ app.get('/home', async (req: Request, res: Response) => {
                     }
                 }
             }
-            
             console.log(sensorThings);
-            
             res.render('home.pug', {sensorData: sensorThings})
-        } else {
-            res.redirect('/config')
         }
-    } else {
-        res.render('error.pug')
-    }
+        
+        } else {
+            res.render('error.pug')
+        }
 })
 
 app.post('/create_config', upload.none(), async (req: Request, res: Response) => {
@@ -426,14 +440,10 @@ app.get('/config', async (req: Request, res: Response) => {
     if (session?.info.isLoggedIn) {
         try {
             const sensorInboxUri = await getSensorInboxResource(session);
-            if (!sensorInboxUri) {
-                res.render('config.pug')
-            } else {
-                res.render('update_cfg.pug')
-            }
+            res.render('update_config.pug')
         } catch (error) {
             console.log(error);
-            res.redirect('/error')
+            res.render('config.pug')
         }
     }
 });

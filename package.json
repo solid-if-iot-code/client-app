@@ -21,6 +21,7 @@
     "@comunica/query-sparql": "^2.4.3",
     "@inrupt/solid-client": "^1.23.1",
     "@inrupt/solid-client-authn-node": "^1.12.2",
+    "@inrupt/vocab-common-rdf": "^1.0.5",
     "cookie-session": "^2.0.0",
     "cors": "^2.8.5",
     "express": "^4.18.1",
