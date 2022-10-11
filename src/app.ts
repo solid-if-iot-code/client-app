@@ -64,7 +64,7 @@ app.use(
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
 );
-
+const session = new Session();
 async function getSensorInboxResource(session: Session): Promise<string | null> {
     const webId = session.info.webId!;
     //console.log('in get sensor inbox rsc')
@@ -241,7 +241,7 @@ app.post("/login", upload.none(), (req: Request, res: Response) => {
 })
 
 app.get("/login", async (req: Request, res: Response) => {
-    const session = new Session();
+    
     const oidcIssuer = (req.session as CookieSessionInterfaces.CookieSessionObject).oidcIssuer;
     (req.session as CookieSessionInterfaces.CookieSessionObject).sessionId = session.info.sessionId;
     const redirectToSolidIdentityProvider = (url: string) => {
@@ -273,17 +273,19 @@ app.get("/redirect-from-solid-idp", async (req, res) => {
 app.get('/home', async (req: Request, res: Response) => {
     const session = await getSessionFromStorage((req.session as CookieSessionInterfaces.CookieSessionObject).sessionId);
     if (session) {
+        console.log('hello')
         let sensorInboxResource;
         try {
             sensorInboxResource = await getSensorInboxResource(session);
         } catch (err) {
             console.log('first error')
             //console.log(err);
-            res.redirect('config');
+            res.redirect('/config');
         }
         
         if (sensorInboxResource) {
             const webId = session.info.webId!;
+            console.log(webId)
             let dataset: any;
             try {
                 //console.log('in try block')
@@ -371,11 +373,13 @@ app.get('/home', async (req: Request, res: Response) => {
             }
             console.log(sensorThings);
             res.render('home.pug', {sensorData: sensorThings})
+        } else {
+            res.redirect('/config')
         }
         
-        } else {
-            res.render('error.pug')
-        }
+    } else {
+        res.render('error.pug')
+    }
 })
 
 app.post('/create_config', upload.none(), async (req: Request, res: Response) => {
@@ -440,10 +444,15 @@ app.get('/config', async (req: Request, res: Response) => {
     if (session?.info.isLoggedIn) {
         try {
             const sensorInboxUri = await getSensorInboxResource(session);
-            res.render('update_config.pug')
+            if (sensorInboxUri) {
+                res.render('update_cfg.pug')
+            } else {
+                res.render('config.pug')
+            }
+            
         } catch (error) {
             console.log(error);
-            res.render('config.pug')
+            res.redirect('/error')
         }
     }
 });
